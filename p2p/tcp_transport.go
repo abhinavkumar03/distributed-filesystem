@@ -23,27 +23,30 @@ func NewTCPPeer(conn net.Conn, outbound bool) *TCPPeer {
 	}
 }
 
+type TCPTransportOpts struct {
+	ListenAdder    string
+	HandshakerFunc HandshakerFunc
+	Decoder        Decoder
+}
+
 // TCPTransport is a Transport implementation that uses TCP for peer-to-peer communication.
 type TCPTransport struct {
-	listenAdderess string
-	listener       net.Listener
-	shakeHands     HandshakerFunc
-	decoder        Decoder
+	TCPTransportOpts
+	listener net.Listener
 
 	mu    sync.RWMutex
 	peers map[net.Addr]Peer
 }
 
-func NewTCPTransport(listenAddress string) *TCPTransport {
+func NewTCPTransport(opts TCPTransportOpts) *TCPTransport {
 	return &TCPTransport{
-		shakeHands:     NOPHandshakeFunc,
-		listenAdderess: listenAddress,
+		TCPTransportOpts: opts,
 	}
 }
 
 func (t *TCPTransport) ListenAndAccept() error {
 	var err error
-	t.listener, err = net.Listen("tcp", t.listenAdderess)
+	t.listener, err = net.Listen("tcp", t.ListenAdder)
 	if err != nil {
 		return err
 	}
@@ -71,17 +74,29 @@ type Temp struct{}
 func (t *TCPTransport) handleConnection(conn net.Conn) {
 	peer := NewTCPPeer(conn, true)
 
-	if err := t.shakeHands(peer); err != nil {
-
+	if err := t.HandshakerFunc(peer); err != nil {
+		conn.Close()
+		fmt.Printf("TCP handshake errors: %s\n", err)
+		return
 	}
 
 	// Read loop
-	msg := &Temp{}
+	msg := &Message{}
+	// buf := make([]byte, 2000)
 	for {
-		if err := t.decoder.Decode(conn, msg); err != nil {
+
+		// n, err := conn.Read(buf)
+		// if err != nil {
+		// 	fmt.Println("TCP error: %s\n", err)
+		// }
+
+		if err := t.Decoder.Decode(conn, msg); err != nil {
 			fmt.Printf("TCP error: %s\n", err)
 			continue
 		}
+
+		// fmt.Printf("message: %+v\n", buf[:n])
+		fmt.Printf("message: %+v\n", msg)
 	}
 
 }
