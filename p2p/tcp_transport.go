@@ -6,10 +6,29 @@ import (
 	"sync"
 )
 
+// TCPPeer represents the remote node over a TCP established connection
+type TCPPeer struct {
+	// conn is the underlying connection of the peer
+	conn net.Conn
+
+	// if we dial and retreive a conn => outbound == true
+	// if we accept and retreive a conn => outbound == false
+	outbound bool
+}
+
+func NewTCPPeer(conn net.Conn, outbound bool) *TCPPeer {
+	return &TCPPeer{
+		conn:     conn,
+		outbound: outbound,
+	}
+}
+
 // TCPTransport is a Transport implementation that uses TCP for peer-to-peer communication.
 type TCPTransport struct {
 	listenAdderess string
 	listener       net.Listener
+	shakeHands     HandshakerFunc
+	decoder        Decoder
 
 	mu    sync.RWMutex
 	peers map[net.Addr]Peer
@@ -17,8 +36,8 @@ type TCPTransport struct {
 
 func NewTCPTransport(listenAddress string) *TCPTransport {
 	return &TCPTransport{
+		shakeHands:     NOPHandshakeFunc,
 		listenAdderess: listenAddress,
-		peers:          make(map[net.Addr]Peer),
 	}
 }
 
@@ -39,11 +58,30 @@ func (t *TCPTransport) startAcceptLoop() {
 			fmt.Printf("TCP accept error: %s\n", err)
 			continue
 		}
+
+		fmt.Printf("New incoming connection from %+v\n", conn)
+
 		go t.handleConnection(conn)
 
 	}
 }
 
+type Temp struct{}
+
 func (t *TCPTransport) handleConnection(conn net.Conn) {
-	fmt.Printf("New incoming connection from %+v\n", conn)
+	peer := NewTCPPeer(conn, true)
+
+	if err := t.shakeHands(peer); err != nil {
+
+	}
+
+	// Read loop
+	msg := &Temp{}
+	for {
+		if err := t.decoder.Decode(conn, msg); err != nil {
+			fmt.Printf("TCP error: %s\n", err)
+			continue
+		}
+	}
+
 }
