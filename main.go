@@ -10,7 +10,7 @@ func main() {
 	tcpOpts := p2p.TCPTransportOpts{
 		ListenAdder:    ":3000",
 		HandshakerFunc: p2p.NOPHandshakeFunc,
-		Decoder:        p2p.GOBDecoder{},
+		Decoder:        p2p.DefaultDecoder{},
 	}
 	tr := p2p.NewTCPTransport(tcpOpts)
 	if err := tr.ListenAndAccept(); err != nil {
