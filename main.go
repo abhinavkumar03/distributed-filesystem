@@ -7,13 +7,17 @@ import (
 )
 
 func main() {
-	tr := p2p.NewTCPTransport(":3000")
+	tcpOpts := p2p.TCPTransportOpts{
+		ListenAdder:    ":3000",
+		HandshakerFunc: p2p.NOPHandshakeFunc,
+		Decoder:        p2p.GOBDecoder{},
+	}
+	tr := p2p.NewTCPTransport(tcpOpts)
 	if err := tr.ListenAndAccept(); err != nil {
 		log.Fatal(err)
 	}
 	select {}
 }
 
-// cmd for tcp connection
-// Test-NetConnection localhost -Port 3000
-// curl http://localhost:3000/health
+// cmd for tcp connection in git bash
+// curl telnet://localhost:3000
